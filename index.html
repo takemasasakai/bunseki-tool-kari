@@ -596,6 +596,10 @@
           <input type="number" class="yt-input-sm" id="minRatio" value="1.0" step="0.1" min="0.1">
         </div>
         <div>
+          <div class="field-label">登録者数 最低値</div>
+          <input type="number" class="yt-input-sm" id="minSubs" value="1000" min="0" step="100">
+        </div>
+        <div>
           <div class="field-label">取得件数（上位）</div>
           <input type="number" class="yt-input-sm" id="resultCount" value="40" min="1" max="50">
         </div>
@@ -628,7 +632,7 @@
   <div id="results"></div>
 
   <div class="yt-footer">
-    ※ショート動画をだいたいしか除外できてません。登録者500人以上のチャンネルを対象<br>
+    ※ショート動画をだいたいしか除外できてません。<br>
     YouTube Data API v3 使用 ／ 再生数・登録者数はAPI取得時点の値です
   </div>
 
@@ -828,7 +832,8 @@ async function startSearch() {
   const keyword = document.getElementById('keywordHeader').value.trim();
   const months = getMonths();
   const minRatio = parseFloat(document.getElementById('minRatio').value) || 1.0;
-  const resultCount = parseInt(document.getElementById('resultCount').value) || 10;
+  const minSubs = parseInt(document.getElementById('minSubs').value) || 0;
+  const resultCount = parseInt(document.getElementById('resultCount').value) || 40;
 
   if (!apiKey) {
     document.getElementById('settingsBody').classList.add('open');
@@ -916,7 +921,7 @@ async function startSearch() {
       const subs = channelMap[v.snippet.channelId] || 1;
       return { id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle, publishedAt: v.snippet.publishedAt, thumbnail: v.snippet.thumbnails?.medium?.url || '', views, subs, ratio: views / subs };
     })
-    .filter(v => v.ratio >= minRatio && v.subs >= 500)
+    .filter(v => v.ratio >= minRatio && v.subs >= minSubs)
     .sort((a, b) => b.ratio - a.ratio)
     .slice(0, resultCount);
 
