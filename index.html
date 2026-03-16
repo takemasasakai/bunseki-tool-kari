@@ -688,13 +688,13 @@ function setProgress(pct) {
 }
 
 function formatNum(n) {
-  if (n >= 10000) return Math.floor(n / 10000) + '万';
+  if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万';
   return n.toLocaleString();
 }
 
 function formatNumFull(n) {
   if (n >= 100000000) return (n / 100000000).toFixed(1) + '億';
-  if (n >= 10000)     return Math.floor(n / 10000) + '万';
+  if (n >= 10000)     return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万';
   return n.toLocaleString();
 }
 
