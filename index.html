@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube 分析ツール(仮)</title>
+<title>YouTube 分析ツール(</title
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -575,7 +575,7 @@
 
       <div class="settings-grid">
         <div>
-          <div class="field-label">期間</div>
+          <div class="field-label">いつまでの？</div>
           <select class="yt-input-sm" id="period" onchange="toggleCustomPeriod()">
             <option value="24">過去2年以内</option>
             <option value="12" selected>過去1年以内</option>
@@ -583,12 +583,49 @@
             <option value="3">過去3ヶ月以内</option>
             <option value="custom">カスタム入力...</option>
           </select>
-          <div id="customPeriodWrap" style="display:none; margin-top:6px; display:none; gap:6px; align-items:center;">
+          <div id="customPeriodWrap" style="display:none; margin-top:6px; gap:6px; align-items:center;">
             <input type="number" class="yt-input-sm" id="customPeriodNum" value="6" min="1" max="120" style="width:70px;">
             <select class="yt-input-sm" id="customPeriodUnit" style="width:auto;">
               <option value="month">ヶ月</option>
               <option value="year">年</option>
             </select>
+          </div>
+        </div>
+        <div>
+          <div class="field-label">時期</div>
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <select class="yt-input-sm" id="seasonStart" onchange="toggleSeasonEnd()" style="width:auto; flex:1; min-width:90px;">
+              <option value="none" selected>指定しない</option>
+              <option value="1">1月</option>
+              <option value="2">2月</option>
+              <option value="3">3月</option>
+              <option value="4">4月</option>
+              <option value="5">5月</option>
+              <option value="6">6月</option>
+              <option value="7">7月</option>
+              <option value="8">8月</option>
+              <option value="9">9月</option>
+              <option value="10">10月</option>
+              <option value="11">11月</option>
+              <option value="12">12月</option>
+            </select>
+            <span id="seasonToWrap" style="display:none; align-items:center; gap:6px;">
+              <span style="color:var(--yt-sub);">〜</span>
+              <select class="yt-input-sm" id="seasonEnd" style="width:auto; min-width:90px;">
+                <option value="1">1月</option>
+                <option value="2">2月</option>
+                <option value="3" selected>3月</option>
+                <option value="4">4月</option>
+                <option value="5">5月</option>
+                <option value="6">6月</option>
+                <option value="7">7月</option>
+                <option value="8">8月</option>
+                <option value="9">9月</option>
+                <option value="10">10月</option>
+                <option value="11">11月</option>
+                <option value="12">12月</option>
+              </select>
+            </span>
           </div>
         </div>
         <div>
@@ -655,10 +692,18 @@ function toggleSettings() {
 function toggleCustomPeriod() {
   const sel = document.getElementById('period');
   const wrap = document.getElementById('customPeriodWrap');
-  if (sel.value === 'custom') {
-    wrap.style.display = 'flex';
-  } else {
+  wrap.style.display = sel.value === 'custom' ? 'flex' : 'none';
+}
+
+function toggleSeasonEnd() {
+  const start = document.getElementById('seasonStart');
+  const wrap = document.getElementById('seasonToWrap');
+  if (start.value === 'none') {
     wrap.style.display = 'none';
+  } else {
+    wrap.style.display = 'flex';
+    // 初回選択時は終了月を開始月と同じにしておく（例：3月だけ見たい場合）
+    document.getElementById('seasonEnd').value = start.value;
   }
 }
 
@@ -830,7 +875,6 @@ async function youtubeGet(url, apiKey) {
 async function startSearch() {
   const apiKey = document.getElementById('apiKey').value.trim();
   const keyword = document.getElementById('keywordHeader').value.trim();
-  const months = getMonths();
   const minRatio = parseFloat(document.getElementById('minRatio').value) || 1.0;
   const minSubs = parseInt(document.getElementById('minSubs').value) || 0;
   const resultCount = parseInt(document.getElementById('resultCount').value) || 40;
@@ -845,6 +889,10 @@ async function startSearch() {
     setStatus('キーワードを入力してください', 'error');
     return;
   }
+
+  const months = getMonths();
+  const seasonStartVal = document.getElementById('seasonStart').value;
+  const seasonEndVal = document.getElementById('seasonEnd').value;
 
   currentVideos = [];
   document.getElementById('results').innerHTML = '';
@@ -915,6 +963,19 @@ async function startSearch() {
       return dur > 60 && !title.includes('#shorts') && !title.includes('#short');
     });
 
+    // 4.5 時期（月の範囲）が指定されていれば、その範囲に公開された動画のみに絞り込む
+    // （開始月 > 終了月の場合は年をまたぐ範囲として扱う。例：11月〜2月）
+    if (seasonStartVal !== 'none') {
+      const startMonth = parseInt(seasonStartVal);
+      const endMonth = parseInt(seasonEndVal);
+      videos = videos.filter(v => {
+        const m = new Date(v.snippet.publishedAt).getMonth() + 1;
+        return startMonth <= endMonth
+          ? (m >= startMonth && m <= endMonth)
+          : (m >= startMonth || m <= endMonth);
+      });
+    }
+
     // 5. Score
     const scored = videos.map(v => {
       const views = parseInt(v.statistics.viewCount || 0);
@@ -943,7 +1004,7 @@ function renderResults(videos, keyword) {
   const el = document.getElementById('results');
 
   if (!videos.length) {
-    el.innerHTML = `<div class="yt-empty"><div class="icon">🔍</div><p>「${escHtml(keyword)}」で条件を満たす動画が見つかりませんでした。<br>比率の閾値を下げるか、別のキーワードをお試しください。</p></div>`;
+    el.innerHTML = `<div class="yt-empty"><div class="icon">🔍</div><p>「${escHtml(keyword)}」で条件を満たす動画が見つかりませんでした。<br>比率の閾値を下げる、時期の指定を外す、別のキーワードをお試しください。</p></div>`;
     return;
   }
 
